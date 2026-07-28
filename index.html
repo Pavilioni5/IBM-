@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>K8s Namespace Isolation — Project Blueprint</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Sans+Condensed:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --blue-0:#0b2f4e;
+    --blue-1:#0f3f66;
+    --blue-2:#154f7e;
+    --line:#7fb8dd;
+    --line-dim:#3d6d90;
+    --paper:#eaf3f8;
+    --ink:#0b2f4e;
+    --amber:#e8a33d;
+    --amber-dim:#c8863a;
+    --ok:#7fd9a8;
+    --font-display:'IBM Plex Sans Condensed', sans-serif;
+    --font-body:'IBM Plex Sans', sans-serif;
+    --font-mono:'IBM Plex Mono', monospace;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--blue-0);
+    color:var(--paper);
+    font-family:var(--font-body);
+    line-height:1.55;
+    background-image:
+      linear-gradient(var(--line-dim) 1px, transparent 1px),
+      linear-gradient(90deg, var(--line-dim) 1px, transparent 1px);
+    background-size:36px 36px;
+    background-attachment:fixed;
+  }
+  a{color:var(--amber);}
+
+  /* ---- top nav ---- */
+  nav{
+    position:sticky; top:0; z-index:50;
+    display:flex; align-items:center; gap:22px;
+    padding:14px 28px;
+    background:rgba(11,47,78,0.92);
+    backdrop-filter:blur(6px);
+    border-bottom:1px solid var(--line-dim);
+    overflow-x:auto;
+  }
+  nav .brand{
+    font-family:var(--font-mono); font-weight:600; letter-spacing:0.5px;
+    color:var(--amber); white-space:nowrap; font-size:13px;
+  }
+  nav .brand span{color:var(--line);}
+  nav a.navlink{
+    font-family:var(--font-mono); font-size:12.5px; color:var(--line);
+    text-decoration:none; white-space:nowrap; letter-spacing:0.3px;
+    border-bottom:1px solid transparent; padding-bottom:2px;
+  }
+  nav a.navlink:hover{color:var(--paper); border-color:var(--amber);}
+
+  section{max-width:1040px; margin:0 auto; padding:64px 28px;}
+
+  /* ---- hero ---- */
+  .hero{
+    max-width:1040px; margin:0 auto; padding:88px 28px 60px;
+    position:relative;
+  }
+  .eyebrow{
+    font-family:var(--font-mono); font-size:12px; letter-spacing:2px;
+    color:var(--amber); text-transform:uppercase; margin:0 0 18px;
+    display:flex; align-items:center; gap:10px;
+  }
+  .eyebrow::before{content:''; width:26px; height:1px; background:var(--amber); display:inline-block;}
+  h1{
+    font-family:var(--font-display); font-weight:700;
+    font-size:clamp(38px,6vw,68px); line-height:0.98; margin:0 0 20px;
+    letter-spacing:-0.5px;
+  }
+  h1 em{font-style:normal; color:var(--line);}
+  .hero p.lede{
+    font-size:18px; max-width:640px; color:#c7dcea; margin:0 0 34px;
+  }
+  .badge-row{display:flex; flex-wrap:wrap; gap:10px; margin-bottom:48px;}
+  .badge{
+    font-family:var(--font-mono); font-size:11.5px; padding:5px 11px;
+    border:1px solid var(--line-dim); border-radius:2px; color:var(--line);
+  }
+
+  /* blueprint diagram */
+  .blueprint{
+    border:1px solid var(--line-dim); border-radius:2px;
+    padding:26px; position:relative; background:rgba(21,79,126,0.15);
+  }
+  .blueprint::before{
+    content:'FIG. 1 — CLUSTER TOPOLOGY'; position:absolute; top:-11px; left:20px;
+    background:var(--blue-0); padding:0 8px; font-family:var(--font-mono);
+    font-size:10.5px; letter-spacing:1.5px; color:var(--line);
+  }
+  svg text{font-family:var(--font-mono);}
+
+  /* ---- section headers ---- */
+  .sec-head{display:flex; align-items:baseline; gap:14px; margin-bottom:8px;}
+  .sec-num{font-family:var(--font-mono); color:var(--amber); font-size:14px;}
+  h2{
+    font-family:var(--font-display); font-weight:700; font-size:32px;
+    margin:0; letter-spacing:-0.3px;
+  }
+  .sec-sub{color:#9cc0d8; font-size:15px; margin:6px 0 32px; max-width:620px;}
+  hr.rule{border:none; border-top:1px solid var(--line-dim); margin:0 0 40px;}
+
+  /* ---- objectives ---- */
+  .obj-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:1px; background:var(--line-dim); border:1px solid var(--line-dim);}
+  .obj-card{background:var(--blue-0); padding:20px;}
+  .obj-card .n{font-family:var(--font-mono); color:var(--amber); font-size:12px;}
+  .obj-card p{margin:8px 0 0; font-size:14.5px; color:#dcebf4;}
+
+  /* ---- namespace table ---- */
+  table.ns{width:100%; border-collapse:collapse; font-size:14.5px;}
+  table.ns th, table.ns td{
+    border:1px solid var(--line-dim); padding:11px 14px; text-align:left;
+  }
+  table.ns th{
+    font-family:var(--font-mono); font-size:11.5px; letter-spacing:1px;
+    color:var(--amber); background:rgba(21,79,126,0.4); text-transform:uppercase;
+  }
+  table.ns td.mono{font-family:var(--font-mono); font-size:13.5px;}
+  .tag{font-family:var(--font-mono); font-size:11.5px; padding:2px 8px; border-radius:2px;}
+  .tag.dev{background:rgba(127,217,168,0.15); color:var(--ok); border:1px solid rgba(127,217,168,0.4);}
+  .tag.test{background:rgba(232,163,61,0.15); color:var(--amber); border:1px solid rgba(232,163,61,0.4);}
+  .tag.prod{background:rgba(224,90,90,0.15); color:#e88a8a; border:1px solid rgba(224,90,90,0.4);}
+
+  /* ---- manifest tabs ---- */
+  .tabs{display:flex; gap:2px; margin-bottom:0; flex-wrap:wrap;}
+  .tab-btn{
+    font-family:var(--font-mono); font-size:12.5px; padding:10px 18px;
+    background:rgba(21,79,126,0.3); border:1px solid var(--line-dim); border-bottom:none;
+    color:var(--line); cursor:pointer; letter-spacing:0.5px;
+  }
+  .tab-btn.active{background:var(--blue-0); color:var(--amber); border-color:var(--amber-dim);}
+  .tab-panel{display:none; border:1px solid var(--line-dim); background:rgba(6,26,44,0.6);}
+  .tab-panel.active{display:grid; grid-template-columns:1fr 1fr;}
+  @media (max-width:720px){.tab-panel.active{grid-template-columns:1fr;}}
+  .tab-panel .file{border-left:1px solid var(--line-dim);}
+  .tab-panel .file:first-child{border-left:none;}
+  .file-label{
+    font-family:var(--font-mono); font-size:11px; color:var(--amber);
+    padding:10px 16px; border-bottom:1px solid var(--line-dim); letter-spacing:0.5px;
+  }
+  pre{
+    margin:0; padding:16px; font-family:var(--font-mono); font-size:12.5px;
+    color:#cfe6f2; overflow-x:auto; line-height:1.65;
+  }
+  pre .k{color:var(--amber);}
+  pre .s{color:var(--ok);}
+  pre .c{color:var(--line-dim);}
+
+  /* ---- terminal ---- */
+  .terminal{
+    border:1px solid var(--line-dim); background:#061a2c; border-radius:3px; overflow:hidden;
+  }
+  .terminal .bar{
+    display:flex; gap:6px; padding:9px 12px; background:rgba(21,79,126,0.35);
+    border-bottom:1px solid var(--line-dim);
+  }
+  .terminal .dot{width:9px; height:9px; border-radius:50%; background:var(--line-dim);}
+  .terminal pre{font-size:12.5px; padding:18px;}
+  .terminal .prompt{color:var(--ok);}
+  .terminal .out{color:#9cc0d8;}
+
+  /* ---- flow steps ---- */
+  .flow{display:flex; flex-wrap:wrap; gap:0; align-items:stretch; margin-bottom:36px;}
+  .flow-step{
+    flex:1; min-width:140px; border:1px solid var(--line-dim); padding:16px;
+    position:relative; background:rgba(21,79,126,0.12);
+  }
+  .flow-step + .flow-step{border-left:none;}
+  .flow-step .num{font-family:var(--font-mono); color:var(--amber); font-size:11px;}
+  .flow-step .cmd{font-family:var(--font-mono); font-size:12px; color:var(--paper); margin-top:8px; word-break:break-word;}
+
+  /* ---- accordion ---- */
+  .acc-item{border:1px solid var(--line-dim); margin-bottom:-1px;}
+  .acc-head{
+    display:flex; justify-content:space-between; align-items:center;
+    padding:16px 18px; cursor:pointer; font-family:var(--font-mono); font-size:13.5px;
+    color:var(--paper); background:rgba(21,79,126,0.15);
+  }
+  .acc-head .plus{color:var(--amber); font-size:16px;}
+  .acc-body{max-height:0; overflow:hidden; transition:max-height 0.25s ease;}
+  .acc-body-in{padding:0 18px 18px; font-size:14px; color:#c7dcea;}
+  .acc-item.open .acc-body{max-height:300px;}
+
+  /* ---- glossary ---- */
+  .gloss{display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:1px; background:var(--line-dim); border:1px solid var(--line-dim);}
+  .gloss-item{background:var(--blue-0); padding:18px;}
+  .gloss-item dt{font-family:var(--font-mono); color:var(--amber); font-size:13px; margin-bottom:6px;}
+  .gloss-item dd{margin:0; font-size:13.5px; color:#c7dcea;}
+
+  footer{
+    border-top:1px solid var(--line-dim); padding:40px 28px 60px; text-align:center;
+    font-family:var(--font-mono); font-size:12px; color:var(--line-dim);
+  }
+
+  .callout{
+    border-left:3px solid var(--amber); padding:12px 16px; background:rgba(232,163,61,0.08);
+    font-size:14px; color:#e8d9bd; margin-top:24px;
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="brand">K8S<span>://</span>NAMESPACE-ISOLATION</div>
+  <a class="navlink" href="#architecture">Architecture</a>
+  <a class="navlink" href="#namespaces">Namespaces</a>
+  <a class="navlink" href="#manifests">Manifests</a>
+  <a class="navlink" href="#workflow">Workflow</a>
+  <a class="navlink" href="#verify">Verification</a>
+  <a class="navlink" href="#rollout">Rolling Update</a>
+  <a class="navlink" href="#troubleshoot">Troubleshooting</a>
+  <a class="navlink" href="#glossary">Glossary</a>
+</nav>
+
+<div class="hero">
+  <p class="eyebrow">Minikube · kubectl v1.35 · Local Cluster</p>
+  <h1>Kubernetes<br><em>Namespace Isolation.</em></h1>
+  <p class="lede">Three environments — <b>dev</b>, <b>test</b>, and <b>prod</b> — deployed as logically isolated slices of a single Minikube cluster, each running its own NGINX Deployment, ReplicaSet, and Service.</p>
+  <div class="badge-row">
+    <span class="badge">minikube v1.38.1</span>
+    <span class="badge">kubectl v1.35.2</span>
+    <span class="badge">Docker 29.2.1</span>
+    <span class="badge">nginx:latest / nginx:1.25</span>
+    <span class="badge">3 namespaces</span>
+  </div>
+
+  <div class="blueprint">
+    <svg viewBox="0 0 960 300" width="100%" style="overflow:visible">
+      <!-- cluster boundary -->
+      <rect x="10" y="20" width="940" height="260" fill="none" stroke="#3d6d90" stroke-dasharray="4 3"/>
+      <text x="24" y="14" fill="#7fb8dd" font-size="11" letter-spacing="1">MINIKUBE CLUSTER</text>
+
+      <!-- dev box -->
+      <rect x="40" y="55" width="270" height="200" fill="rgba(127,217,168,0.06)" stroke="#7fd9a8"/>
+      <text x="55" y="80" fill="#7fd9a8" font-size="13" font-weight="600">ns/dev</text>
+      <text x="55" y="100" fill="#9cc0d8" font-size="10.5">Deployment · replicas: 2</text>
+      <rect x="55" y="112" width="42" height="26" fill="none" stroke="#7fd9a8"/>
+      <rect x="105" y="112" width="42" height="26" fill="none" stroke="#7fd9a8"/>
+      <text x="60" y="129" fill="#7fd9a8" font-size="9">pod</text>
+      <text x="110" y="129" fill="#7fd9a8" font-size="9">pod</text>
+      <text x="55" y="163" fill="#9cc0d8" font-size="10.5">Service · ClusterIP</text>
+      <rect x="55" y="175" width="132" height="24" fill="none" stroke="#e8a33d"/>
+      <text x="62" y="191" fill="#e8a33d" font-size="9.5">nginx-service :80</text>
+      <text x="55" y="230" fill="#9cc0d8" font-size="10">image: nginx:1.25</text>
+
+      <!-- test box -->
+      <rect x="345" y="55" width="270" height="200" fill="rgba(232,163,61,0.06)" stroke="#e8a33d"/>
+      <text x="360" y="80" fill="#e8a33d" font-size="13" font-weight="600">ns/test</text>
+      <text x="360" y="100" fill="#9cc0d8" font-size="10.5">Deployment · replicas: 1</text>
+      <rect x="360" y="112" width="42" height="26" fill="none" stroke="#e8a33d"/>
+      <text x="365" y="129" fill="#e8a33d" font-size="9">pod</text>
+      <text x="360" y="163" fill="#9cc0d8" font-size="10.5">Service · ClusterIP</text>
+      <rect x="360" y="175" width="132" height="24" fill="none" stroke="#e8a33d"/>
+      <text x="367" y="191" fill="#e8a33d" font-size="9.5">nginx-service :80</text>
+      <text x="360" y="230" fill="#9cc0d8" font-size="10">image: nginx:latest</text>
+
+      <!-- prod box -->
+      <rect x="650" y="55" width="270" height="200" fill="rgba(224,90,90,0.06)" stroke="#e05a5a"/>
+      <text x="665" y="80" fill="#e88a8a" font-size="13" font-weight="600">ns/prod</text>
+      <text x="665" y="100" fill="#9cc0d8" font-size="10.5">Deployment · replicas: 3</text>
+      <rect x="665" y="112" width="38" height="26" fill="none" stroke="#e05a5a"/>
+      <rect x="710" y="112" width="38" height="26" fill="none" stroke="#e05a5a"/>
+      <rect x="755" y="112" width="38" height="26" fill="none" stroke="#e05a5a"/>
+      <text x="670" y="129" fill="#e88a8a" font-size="9">pod</text>
+      <text x="715" y="129" fill="#e88a8a" font-size="9">pod</text>
+      <text x="760" y="129" fill="#e88a8a" font-size="9">pod</text>
+      <text x="665" y="163" fill="#9cc0d8" font-size="10.5">Service · ClusterIP</text>
+      <rect x="665" y="175" width="132" height="24" fill="none" stroke="#e8a33d"/>
+      <text x="672" y="191" fill="#e8a33d" font-size="9.5">nginx-service :80</text>
+      <text x="665" y="230" fill="#9cc0d8" font-size="10">image: nginx:latest</text>
+
+      <!-- isolation marks between boxes -->
+      <text x="320" y="160" fill="#3d6d90" font-size="16">⟂</text>
+      <text x="625" y="160" fill="#3d6d90" font-size="16">⟂</text>
+    </svg>
+  </div>
+</div>
+
+<section id="architecture">
+  <div class="sec-head"><span class="sec-num">01</span><h2>Architecture</h2></div>
+  <p class="sec-sub">A single control plane, three isolated environments. Each namespace gets its own copy of the same Deployment/Service shape — this is the whole thesis of the project.</p>
+  <hr class="rule">
+  <div class="obj-grid">
+    <div class="obj-card"><span class="n">NAMESPACE</span><p>Logical partition inside one cluster. dev/test/prod never see each other's Pods or Services by default.</p></div>
+    <div class="obj-card"><span class="n">DEPLOYMENT</span><p>Declares desired replica count and Pod template; owns a ReplicaSet per revision.</p></div>
+    <div class="obj-card"><span class="n">REPLICASET</span><p>Keeps the declared number of Pods alive — created and rotated automatically by the Deployment.</p></div>
+    <div class="obj-card"><span class="n">SERVICE</span><p>Stable ClusterIP + DNS name (<code>nginx-service.&lt;ns&gt;.svc</code>) that load-balances across matching Pods via label selector.</p></div>
+  </div>
+</section>
+
+<section id="namespaces">
+  <div class="sec-head"><span class="sec-num">02</span><h2>Namespace comparison</h2></div>
+  <p class="sec-sub">Same app shape, three different configurations — this table is the fastest way to show a reviewer what changes per environment.</p>
+  <hr class="rule">
+  <table class="ns">
+    <tr><th>Namespace</th><th>Replicas</th><th>Image</th><th>Service type</th><th>Role</th></tr>
+    <tr><td><span class="tag dev">dev</span></td><td class="mono">2</td><td class="mono">nginx:1.25</td><td class="mono">ClusterIP</td><td>Active development, pinned image version</td></tr>
+    <tr><td><span class="tag test">test</span></td><td class="mono">1</td><td class="mono">nginx:latest</td><td class="mono">ClusterIP</td><td>Functional testing, single replica</td></tr>
+    <tr><td><span class="tag prod">prod</span></td><td class="mono">3</td><td class="mono">nginx:latest</td><td class="mono">ClusterIP</td><td>High availability, 3-way redundancy</td></tr>
+  </table>
+  <div class="callout">Talking point: <b>dev</b> is the only namespace pinned to <code>nginx:1.25</code> — everything else floats on <code>latest</code>. Worth flagging to your teacher as a deliberate "what I'd fix for real production" observation.</div>
+</section>
+
+<section id="manifests">
+  <div class="sec-head"><span class="sec-num">03</span><h2>Manifests</h2></div>
+  <p class="sec-sub">Every namespace ships the same two files: a Deployment and a Service.</p>
+  <hr class="rule">
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="dev">dev</button>
+    <button class="tab-btn" data-tab="test">test</button>
+    <button class="tab-btn" data-tab="prod">prod</button>
+  </div>
+
+  <div class="tab-panel active" id="panel-dev">
+    <div class="file">
+      <div class="file-label">deployments/nginx-dev.yaml</div>
+      <pre><span class="k">apiVersion:</span> apps/v1
+<span class="k">kind:</span> Deployment
+<span class="k">metadata:</span>
+  <span class="k">name:</span> nginx-deployment
+  <span class="k">namespace:</span> <span class="s">dev</span>
+<span class="k">spec:</span>
+  <span class="k">replicas:</span> 2
+  <span class="k">selector:</span>
+    <span class="k">matchLabels:</span> { app: nginx }
+  <span class="k">template:</span>
+    <span class="k">metadata:</span>
+      <span class="k">labels:</span> { app: nginx }
+    <span class="k">spec:</span>
+      <span class="k">containers:</span>
+      - <span class="k">name:</span> nginx
+        <span class="k">image:</span> <span class="s">nginx:1.25</span>
+        <span class="k">ports:</span>
+        - <span class="k">containerPort:</span> 80</pre>
+    </div>
+    <div class="file">
+      <div class="file-label">services/nginx-dev-service.yaml</div>
+      <pre><span class="k">apiVersion:</span> v1
+<span class="k">kind:</span> Service
+<span class="k">metadata:</span>
+  <span class="k">name:</span> nginx-service
+  <span class="k">namespace:</span> <span class="s">dev</span>
+<span class="k">spec:</span>
+  <span class="k">selector:</span> { app: nginx }
+  <span class="k">ports:</span>
+    - <span class="k">protocol:</span> TCP
+      <span class="k">port:</span> 80
+      <span class="k">targetPort:</span> 80
+  <span class="k">type:</span> ClusterIP</pre>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="panel-test">
+    <div class="file">
+      <div class="file-label">deployments/nginx-test.yaml</div>
+      <pre><span class="k">apiVersion:</span> apps/v1
+<span class="k">kind:</span> Deployment
+<span class="k">metadata:</span>
+  <span class="k">name:</span> nginx-deployment
+  <span class="k">namespace:</span> <span class="s">test</span>
+<span class="k">spec:</span>
+  <span class="k">replicas:</span> 1
+  <span class="k">selector:</span>
+    <span class="k">matchLabels:</span> { app: nginx }
+  <span class="k">template:</span>
+    <span class="k">metadata:</span>
+      <span class="k">labels:</span> { app: nginx }
+    <span class="k">spec:</span>
+      <span class="k">containers:</span>
+      - <span class="k">name:</span> nginx
+        <span class="k">image:</span> <span class="s">nginx:latest</span>
+        <span class="k">ports:</span>
+        - <span class="k">containerPort:</span> 80</pre>
+    </div>
+    <div class="file">
+      <div class="file-label">services/nginx-test-service.yaml</div>
+      <pre><span class="k">apiVersion:</span> v1
+<span class="k">kind:</span> Service
+<span class="k">metadata:</span>
+  <span class="k">name:</span> nginx-service
+  <span class="k">namespace:</span> <span class="s">test</span>
+<span class="k">spec:</span>
+  <span class="k">selector:</span> { app: nginx }
+  <span class="k">ports:</span>
+  - <span class="k">protocol:</span> TCP
+    <span class="k">port:</span> 80
+    <span class="k">targetPort:</span> 80
+  <span class="k">type:</span> ClusterIP</pre>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="panel-prod">
+    <div class="file">
+      <div class="file-label">deployments/nginx-prod.yaml</div>
+      <pre><span class="k">apiVersion:</span> apps/v1
+<span class="k">kind:</span> Deployment
+<span class="k">metadata:</span>
+  <span class="k">name:</span> nginx-deployment
+  <span class="k">namespace:</span> <span class="s">prod</span>
+<span class="k">spec:</span>
+  <span class="k">replicas:</span> 3
+  <span class="k">selector:</span>
+    <span class="k">matchLabels:</span> { app: nginx }
+  <span class="k">template:</span>
+    <span class="k">metadata:</span>
+      <span class="k">labels:</span> { app: nginx }
+    <span class="k">spec:</span>
+      <span class="k">containers:</span>
+      - <span class="k">name:</span> nginx
+        <span class="k">image:</span> <span class="s">nginx:latest</span>
+        <span class="k">ports:</span>
+        - <span class="k">containerPort:</span> 80</pre>
+    </div>
+    <div class="file">
+      <div class="file-label">services/nginx-prod-service.yaml</div>
+      <pre><span class="k">apiVersion:</span> v1
+<span class="k">kind:</span> Service
+<span class="k">metadata:</span>
+  <span class="k">name:</span> nginx-service
+  <span class="k">namespace:</span> <span class="s">prod</span>
+<span class="k">spec:</span>
+  <span class="k">selector:</span> { app: nginx }
+  <span class="k">ports:</span>
+  - <span class="k">protocol:</span> TCP
+    <span class="k">port:</span> 80
+    <span class="k">targetPort:</span> 80
+  <span class="k">type:</span> ClusterIP</pre>
+    </div>
+  </div>
+</section>
+
+<section id="workflow">
+  <div class="sec-head"><span class="sec-num">04</span><h2>Deployment workflow</h2></div>
+  <p class="sec-sub">Every namespace follows the same four-step apply sequence.</p>
+  <hr class="rule">
+  <div class="flow">
+    <div class="flow-step"><span class="num">01</span><div class="cmd">minikube start</div></div>
+    <div class="flow-step"><span class="num">02</span><div class="cmd">kubectl apply -f namespaces/</div></div>
+    <div class="flow-step"><span class="num">03</span><div class="cmd">kubectl apply -f deployments/</div></div>
+    <div class="flow-step"><span class="num">04</span><div class="cmd">kubectl apply -f services/</div></div>
+  </div>
+  <div class="terminal">
+    <div class="bar"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+    <pre><span class="prompt">$</span> kubectl get pods -A
+<span class="out">NAMESPACE     NAME                                READY   STATUS    RESTARTS   AGE
+dev           nginx-deployment-5fd577784b-6jblg   1/1     Running   0          7m
+dev           nginx-deployment-5fd577784b-kh2gh   1/1     Running   0          7m
+test          nginx-deployment-59f86b59ff-9wc2k   1/1     Running   0          6s
+test          nginx-deployment-59f86b59ff-tn4jn   1/1     Running   0          14m
+prod          nginx-deployment-59f86b59ff-ctq4l   1/1     Running   0          8m
+prod          nginx-deployment-59f86b59ff-hx45x   1/1     Running   0          8m
+prod          nginx-deployment-59f86b59ff-z2q7n   1/1     Running   0          8m</span></pre>
+  </div>
+</section>
+
+<section id="verify">
+  <div class="sec-head"><span class="sec-num">05</span><h2>Verification &amp; scaling</h2></div>
+  <p class="sec-sub">Confirmed live with <code>kubectl scale</code> — each namespace was independently resized without touching the others.</p>
+  <hr class="rule">
+  <table class="ns">
+    <tr><th>Command</th><th>Effect</th></tr>
+    <tr><td class="mono">kubectl scale deployment nginx-deployment --replicas=5 -n dev</td><td>dev scaled 2 → 5, other namespaces unaffected</td></tr>
+    <tr><td class="mono">kubectl scale deployment nginx-deployment --replicas=2 -n test</td><td>test scaled 1 → 2</td></tr>
+    <tr><td class="mono">kubectl scale deployment nginx-deployment --replicas=5 -n prod</td><td>prod scaled 3 → 5</td></tr>
+  </table>
+  <div class="callout">This is the actual proof of isolation: scaling one namespace's Deployment has zero effect on Pod counts in the other two — because the ReplicaSet selectors and namespaces are fully partitioned.</div>
+</section>
+
+<section id="rollout">
+  <div class="sec-head"><span class="sec-num">06</span><h2>Rolling update — dev</h2></div>
+  <p class="sec-sub">Updating the image from <code>nginx:latest</code> to <code>nginx:1.25</code> in <code>dev</code> triggered a zero-downtime RollingUpdate.</p>
+  <hr class="rule">
+  <div class="terminal">
+    <div class="bar"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+    <pre><span class="prompt">$</span> kubectl rollout status deployment/nginx-deployment -n dev
+<span class="out">Waiting: 1 out of 2 new replicas have been updated...
+Waiting: 1 old replicas are pending termination...
+deployment "nginx-deployment" successfully rolled out</span>
+
+<span class="prompt">$</span> kubectl rollout history deployment/nginx-deployment -n dev
+<span class="out">REVISION  CHANGE-CAUSE
+1         &lt;none&gt;
+2         &lt;none&gt;</span></pre>
+  </div>
+  <div class="callout">Old ReplicaSet <span class="mono" style="font-family:var(--font-mono)">nginx-deployment-59f86b59ff</span> scaled to 0, new ReplicaSet <span style="font-family:var(--font-mono)">nginx-deployment-5fd577784b</span> took over — this is the RollingUpdate strategy (max unavailable 25%, max surge 25%) in action.</div>
+</section>
+
+<section id="troubleshoot">
+  <div class="sec-head"><span class="sec-num">07</span><h2>Troubleshooting notes</h2></div>
+  <p class="sec-sub">Real issues hit during the build, and how they were resolved.</p>
+  <hr class="rule">
+  <div class="acc">
+    <div class="acc-item">
+      <div class="acc-head"><span>minikube service — "No node port" / browser not found in WSL</span><span class="plus">+</span></div>
+      <div class="acc-body"><div class="acc-body-in">ClusterIP services aren't externally reachable by design. <code>minikube service</code> opened a tunnel on <code>127.0.0.1:41865</code>, but WSL has no GUI browser to auto-launch — the tunnel itself worked, only the auto-open step failed. Fix: copy the printed URL into any browser manually, or use <code>kubectl port-forward</code>.</div></div>
+    </div>
+    <div class="acc-item">
+      <div class="acc-head"><span>kubectl logs "&lt;pod&gt; not found in namespace default"</span><span class="plus">+</span></div>
+      <div class="acc-body"><div class="acc-body-in">Forgot the <code>-n dev</code> flag — kubectl defaults to the <code>default</code> namespace on every command unless a namespace is explicitly passed or a context override is set.</div></div>
+    </div>
+    <div class="acc-item">
+      <div class="acc-head"><span>Pod stuck in ContainerCreating during scale-up</span><span class="plus">+</span></div>
+      <div class="acc-body"><div class="acc-body-in">Transient — seen briefly while scaling prod to 5 replicas as the image layer was being reused/pulled. Resolved by re-checking <code>kubectl describe pod &lt;name&gt; -n prod</code> and <code>kubectl get events -n prod</code>, which is the standard first move for any stuck pod.</div></div>
+    </div>
+  </div>
+</section>
+
+<section id="glossary">
+  <div class="sec-head"><span class="sec-num">08</span><h2>Glossary</h2></div>
+  <p class="sec-sub">Terms worth having crisp definitions for if asked.</p>
+  <hr class="rule">
+  <dl class="gloss">
+    <div class="gloss-item"><dt>Namespace</dt><dd>A virtual cluster-within-a-cluster; scopes names, RBAC, and resource quotas.</dd></div>
+    <div class="gloss-item"><dt>Pod</dt><dd>The smallest deployable unit — one or more containers sharing network/storage.</dd></div>
+    <div class="gloss-item"><dt>ReplicaSet</dt><dd>Ensures N Pod replicas are running at all times; managed indirectly via Deployments.</dd></div>
+    <div class="gloss-item"><dt>Deployment</dt><dd>Declarative controller for Pods/ReplicaSets — handles rollouts, rollbacks, and scaling.</dd></div>
+    <div class="gloss-item"><dt>Service</dt><dd>Stable virtual IP + DNS name that load-balances traffic to Pods matching a label selector.</dd></div>
+    <div class="gloss-item"><dt>ClusterIP</dt><dd>Default Service type — reachable only from inside the cluster.</dd></div>
+  </dl>
+</section>
+
+<footer>
+  BUILT ON MINIKUBE v1.38.1 — KUBECTL v1.35.2 — DOCKER 29.2.1 · WSL2 / UBUNTU
+</footer>
+
+<script>
+  document.querySelectorAll('.tab-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('panel-'+btn.dataset.tab).classList.add('active');
+    });
+  });
+  document.querySelectorAll('.acc-head').forEach(head=>{
+    head.addEventListener('click', ()=>{
+      const item = head.parentElement;
+      const wasOpen = item.classList.contains('open');
+      document.querySelectorAll('.acc-item').forEach(i=>i.classList.remove('open'));
+      if(!wasOpen) item.classList.add('open');
+      document.querySelectorAll('.acc-head .plus').forEach(p=>p.textContent='+');
+      if(!wasOpen) head.querySelector('.plus').textContent='–';
+    });
+  });
+</script>
+</body>
+</html>
