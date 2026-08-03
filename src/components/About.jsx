@@ -39,6 +39,8 @@ const envMatrix = [
     color: "bg-emerald-500/10 text-emerald-400 border-emerald-500/30",
     badge: "Active Iteration",
     replicas: 2,
+    quota: "1 CPU / 1GB RAM / 5 Pods",
+    netpol: "Strict Ingress (dev-only)",
     image: "nginx:1.25",
     svc: "ClusterIP",
     role: "Dev team testing, pinned image version for environment stability."
@@ -49,6 +51,8 @@ const envMatrix = [
     color: "bg-amber-500/10 text-amber-400 border-amber-500/30",
     badge: "QA / Automated CI",
     replicas: 1,
+    quota: "0.5 CPU / 512MB RAM / 3 Pods",
+    netpol: "Strict Ingress (test-only)",
     image: "nginx:latest",
     svc: "ClusterIP",
     role: "Integration and automated functional testing with minimal resource overhead."
@@ -59,6 +63,8 @@ const envMatrix = [
     color: "bg-rose-500/10 text-rose-400 border-rose-500/30",
     badge: "High Availability",
     replicas: 3,
+    quota: "4 CPU / 4GB RAM / 10 Pods",
+    netpol: "Zero-Trust Ingress (prod-only)",
     image: "nginx:latest",
     svc: "ClusterIP",
     role: "Production-ready 3-pod redundancy for zero-downtime traffic load balancing."
@@ -80,7 +86,7 @@ export default function About() {
             About The Project
           </h2>
           <p className="mt-3 text-slate-400 text-base">
-            Understand how Kubernetes namespace partitioning enables multi-tenant enterprise software delivery pipelines on shared hardware.
+            Understand how Kubernetes namespace partitioning and security guardrails enable multi-tenant enterprise software delivery pipelines.
           </p>
         </div>
 
@@ -109,10 +115,10 @@ export default function About() {
             <div>
               <h3 className="text-xl font-bold text-white font-display flex items-center gap-2">
                 <ShieldCheck className="w-5 h-5 text-emerald-400" />
-                <span>Namespace Environment Comparison</span>
+                <span>Namespace Environment & Guardrail Matrix</span>
               </h3>
               <p className="text-xs text-slate-400 font-mono mt-1">
-                Same container application shape across 3 distinct isolation profiles.
+                ResourceQuotas and Zero-Trust NetworkPolicies configured per environment.
               </p>
             </div>
             <div className="text-xs font-mono text-slate-400 bg-slate-800/80 px-3 py-1.5 rounded-xl border border-slate-700">
@@ -127,8 +133,9 @@ export default function About() {
                   <th className="py-3 px-4">Environment</th>
                   <th className="py-3 px-4">Profile</th>
                   <th className="py-3 px-4">Default Replicas</th>
+                  <th className="py-3 px-4">ResourceQuota Cap</th>
+                  <th className="py-3 px-4">NetworkPolicy</th>
                   <th className="py-3 px-4">Container Image</th>
-                  <th className="py-3 px-4">Service Type</th>
                   <th className="py-3 px-4">Operational Role</th>
                 </tr>
               </thead>
@@ -142,8 +149,9 @@ export default function About() {
                     </td>
                     <td className="py-4 px-4 font-medium text-slate-200">{row.badge}</td>
                     <td className="py-4 px-4 font-mono text-slate-300 font-bold">{row.replicas} Pods</td>
-                    <td className="py-4 px-4 font-mono text-emerald-400 text-xs">{row.image}</td>
-                    <td className="py-4 px-4 font-mono text-blue-400 text-xs">{row.svc}</td>
+                    <td className="py-4 px-4 font-mono text-amber-400 text-xs">{row.quota}</td>
+                    <td className="py-4 px-4 font-mono text-emerald-400 text-xs">{row.netpol}</td>
+                    <td className="py-4 px-4 font-mono text-blue-400 text-xs">{row.image}</td>
                     <td className="py-4 px-4 text-slate-300 text-xs leading-normal">{row.role}</td>
                   </tr>
                 ))}

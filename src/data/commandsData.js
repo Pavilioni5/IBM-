@@ -15,6 +15,14 @@ export const commandsList = [
   { command: "kubectl describe ns dev", category: "Namespace Management", description: "Shows details, quotas, and status of dev namespace." },
   { command: "kubectl delete ns test", category: "Namespace Management", description: "Deletes test namespace and all encapsulated workloads." },
 
+  // Security & Guardrails
+  { command: "kubectl apply -f quotas/", category: "Security & Guardrails", description: "Enforces CPU, Memory, and Pod limit quotas across namespaces." },
+  { command: "kubectl apply -f netpol/", category: "Security & Guardrails", description: "Applies Zero-Trust NetworkPolicies blocking cross-namespace traffic." },
+  { command: "kubectl get resourcequotas -A", category: "Security & Guardrails", description: "Lists resource quotas and usage limits across all namespaces." },
+  { command: "kubectl get netpol -A", category: "Security & Guardrails", description: "Lists active Zero-Trust NetworkPolicies across all namespaces." },
+  { command: "kubectl describe resourcequota dev-quota -n dev", category: "Security & Guardrails", description: "Displays current hard caps vs active usage for CPU/RAM in dev." },
+  { command: "kubectl describe netpol dev-network-policy -n dev", category: "Security & Guardrails", description: "Inspects ingress firewall rules for dev namespace." },
+
   // Deployments
   { command: "kubectl apply -f deployments/nginx-dev.yaml", category: "Deployments", description: "Deploys 2 NGINX replicas in dev namespace." },
   { command: "kubectl apply -f deployments/nginx-test.yaml", category: "Deployments", description: "Deploys 1 NGINX replica in test namespace." },
@@ -59,6 +67,7 @@ export const commandCategories = [
   "All",
   "Cluster Lifecycle",
   "Namespace Management",
+  "Security & Guardrails",
   "Deployments",
   "Services & Networking",
   "Scaling & Workloads",

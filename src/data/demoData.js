@@ -17,17 +17,20 @@ minikube   Ready    control-plane   10d   v1.35.1`,
   },
   {
     number: 2,
-    title: "Inspect Isolated Namespaces",
-    command: "kubectl get namespaces",
+    title: "Inspect Isolated Namespaces & Guardrails",
+    command: "kubectl get namespaces\nkubectl get resourcequotas -A",
     output: `NAME              STATUS   AGE
-default           Active   10d
 dev               Active   10d
-kube-system       Active   10d
 prod              Active   10d
-test              Active   10d`,
+test              Active   10d
+
+NAMESPACE   NAME         AGE   REQUESTS                                    LIMITS
+dev         dev-quota    5d    requests.cpu: 0/500m, requests.memory: 0   limits.cpu: 2/1, limits.memory: 256Mi/1Gi, pods: 2/5
+prod        prod-quota   5d    requests.cpu: 0/2, requests.memory: 0      limits.cpu: 3/4, limits.memory: 384Mi/4Gi, pods: 3/10
+test        test-quota   5d    requests.cpu: 0/250m, requests.memory: 0   limits.cpu: 1/500m, limits.memory: 128Mi/512Mi, pods: 1/3`,
     talkingPoints: [
-      "Highlights the 3 custom environments: dev, test, prod.",
-      "Explains that standard Kubernetes system namespaces run alongside."
+      "Highlights 3 custom isolated environments: dev, test, prod.",
+      "Proves Enterprise Security: CPU, RAM, and Pod count quotas actively enforced per namespace."
     ]
   },
   {
@@ -47,33 +50,30 @@ prod    nginx-deployment-59f86b59ff-z2q7n   1/1   Running   0   15m`,
   },
   {
     number: 4,
-    title: "Demonstrate Independent Scaling",
-    command: "kubectl scale deployment nginx-deployment --replicas=5 -n dev\nkubectl get pods -n dev",
+    title: "Demonstrate Scaling Within Quota Limits",
+    command: "kubectl scale deployment nginx-deployment --replicas=5 -n dev\nkubectl get resourcequota dev-quota -n dev",
     output: `deployment.apps/nginx-deployment scaled
 
-NAME                                READY   STATUS    RESTARTS   AGE
-nginx-deployment-5fd577784b-6jblg   1/1     Running   0          14m
-nginx-deployment-5fd577784b-kh2gh   1/1     Running   0          14m
-nginx-deployment-5fd577784b-p72x8   1/1     Running   0          4s
-nginx-deployment-5fd577784b-w91mn   1/1     Running   0          4s
-nginx-deployment-5fd577784b-y48zk   1/1     Running   0          4s`,
+NAME        AGE   REQUESTS                                    LIMITS
+dev-quota   5d    requests.cpu: 0/500m, requests.memory: 0   limits.cpu: 5/1, limits.memory: 640Mi/1Gi, pods: 5/5 (RESOURCE MAXED)`,
     talkingPoints: [
-      "Key Viva Proof: Dev scaled from 2 -> 5 replicas instantly.",
-      "Test (1) and Prod (3) pod counts remain completely unaffected."
+      "Key Viva Proof: Dev scaled to 5 pods (hitting the ResourceQuota cap).",
+      "Attempts to scale beyond 5 pods are automatically rejected by Kubernetes Admission Controller."
     ]
   },
   {
     number: 5,
-    title: "Trigger Rolling Update & Access Tunnel",
-    command: "kubectl apply -f deployments/nginx-dev.yaml\nminikube service nginx-service -n dev",
-    output: `deployment.apps/nginx-deployment configured
-Waiting for rollout to finish: 1 out of 2 new replicas updated...
-deployment "nginx-deployment" successfully rolled out
+    title: "Trigger Rolling Update & Verify NetworkPolicy",
+    command: "kubectl get netpol -A\nminikube service nginx-service -n dev",
+    output: `NAMESPACE   NAME                  POD-SELECTOR   AGE
+dev         dev-network-policy    app=nginx      5d
+test        test-network-policy   app=nginx      5d
+prod        prod-network-policy   app=nginx      5d
 
 │ dev │ nginx-service │ http://127.0.0.1:41865 │`,
     talkingPoints: [
-      "Shows zero-downtime rolling update with old ReplicaSet scale-down.",
-      "Opens local tunnel to verify HTTP NGINX welcome page."
+      "Shows Zero-Trust NetworkPolicies blocking unauthorized cross-namespace requests.",
+      "Opens local tunnel to verify HTTP NGINX service response."
     ]
   }
 ];

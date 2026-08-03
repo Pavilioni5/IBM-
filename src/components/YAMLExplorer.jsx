@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Code, Copy, Check, FileCode, Layers, Server, Cpu, HelpCircle } from 'lucide-react';
+import { Code, Copy, Check, FileCode, Layers, Server, Cpu, HelpCircle, Shield, Lock } from 'lucide-react';
 import { yamlManifests } from '../data/yamlData';
 
 export default function YAMLExplorer() {
@@ -36,17 +36,17 @@ export default function YAMLExplorer() {
         </div>
 
         {/* Control Bars */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-8">
+        <div className="flex flex-col lg:flex-row items-center justify-between gap-4 mb-8">
           
           {/* Environment Tabs (dev, test, prod) */}
-          <div className="flex items-center gap-2 bg-slate-900 p-1.5 rounded-2xl border border-slate-800 w-full sm:w-auto">
+          <div className="flex items-center gap-2 bg-slate-900 p-1.5 rounded-2xl border border-slate-800 w-full lg:w-auto">
             {['dev', 'test', 'prod'].map((env) => {
               const isActive = activeEnv === env;
               return (
                 <button
                   key={env}
                   onClick={() => setActiveEnv(env)}
-                  className={`flex-1 sm:flex-initial px-4 py-2 rounded-xl font-mono text-xs font-bold transition-all ${
+                  className={`flex-1 lg:flex-initial px-4 py-2 rounded-xl font-mono text-xs font-bold transition-all ${
                     isActive
                       ? env === 'dev' ? 'bg-emerald-600 text-white shadow-glow'
                         : env === 'test' ? 'bg-amber-600 text-white shadow-glow'
@@ -60,12 +60,14 @@ export default function YAMLExplorer() {
             })}
           </div>
 
-          {/* Resource Type Selector (Namespace, Deployment, Service) */}
-          <div className="flex items-center gap-2 bg-slate-900 p-1.5 rounded-2xl border border-slate-800 w-full sm:w-auto">
+          {/* Resource Type Selector (Namespace, Deployment, Service, ResourceQuota, NetworkPolicy) */}
+          <div className="flex flex-wrap items-center gap-2 bg-slate-900 p-1.5 rounded-2xl border border-slate-800 w-full lg:w-auto">
             {[
               { id: 'namespace', label: 'Namespace', icon: Layers },
               { id: 'deployment', label: 'Deployment', icon: Server },
-              { id: 'service', label: 'Service', icon: Cpu }
+              { id: 'service', label: 'Service', icon: Cpu },
+              { id: 'quota', label: 'ResourceQuota', icon: Shield },
+              { id: 'netpol', label: 'NetworkPolicy', icon: Lock }
             ].map((res) => {
               const Icon = res.icon;
               const isActive = activeType === res.id;
@@ -73,7 +75,7 @@ export default function YAMLExplorer() {
                 <button
                   key={res.id}
                   onClick={() => setActiveType(res.id)}
-                  className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all ${
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
                     isActive
                       ? 'bg-blue-600 text-white shadow-glow'
                       : 'text-slate-400 hover:text-white hover:bg-slate-800/50'

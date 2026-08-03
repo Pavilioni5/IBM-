@@ -13,6 +13,26 @@ const treeData = [
     ]
   },
   {
+    name: 'quotas',
+    type: 'folder',
+    desc: 'ResourceQuota CPU, RAM & Pod count limits',
+    children: [
+      { name: 'dev-quota.yaml', type: 'file', size: '185 B', lines: 14, desc: 'Enforces 1 vCPU, 1GB RAM, 5 Pods limit for ns/dev' },
+      { name: 'test-quota.yaml', type: 'file', size: '187 B', lines: 14, desc: 'Enforces 0.5 CPU, 512MB RAM, 3 Pods limit for ns/test' },
+      { name: 'prod-quota.yaml', type: 'file', size: '186 B', lines: 14, desc: 'Enforces 4 vCPU, 4GB RAM, 10 Pods limit for ns/prod' }
+    ]
+  },
+  {
+    name: 'netpol',
+    type: 'folder',
+    desc: 'Zero-Trust Ingress NetworkPolicy firewall rules',
+    children: [
+      { name: 'dev-netpol.yaml', type: 'file', size: '272 B', lines: 19, desc: 'Restricts ns/dev pod ingress to dev namespace traffic only' },
+      { name: 'test-netpol.yaml', type: 'file', size: '275 B', lines: 19, desc: 'Restricts ns/test pod ingress to test namespace traffic only' },
+      { name: 'prod-netpol.yaml', type: 'file', size: '275 B', lines: 19, desc: 'Restricts ns/prod pod ingress to prod namespace traffic only' }
+    ]
+  },
+  {
     name: 'deployments',
     type: 'folder',
     desc: 'NGINX Workload Deployments and ReplicaSets',
@@ -49,7 +69,7 @@ const treeData = [
 ];
 
 export default function ProjectStructure() {
-  const [openFolders, setOpenFolders] = useState({ namespaces: true, deployments: true, services: true });
+  const [openFolders, setOpenFolders] = useState({ namespaces: true, quotas: true, netpol: true, deployments: true, services: true });
   const [selectedFile, setSelectedFile] = useState(treeData[0].children[0]);
 
   const toggleFolder = (folderName) => {

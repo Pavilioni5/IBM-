@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Cpu, Server, Shield, Layers, Box, Globe, Terminal, ArrowDown, Radio, Info, Check } from 'lucide-react';
+import { Cpu, Server, Shield, Layers, Box, Globe, Terminal, ArrowDown, Radio, Info, Check, Lock } from 'lucide-react';
 import { architectureData } from '../data/architectureData';
 
 export default function Architecture() {
@@ -24,7 +24,7 @@ export default function Architecture() {
             Cluster Architecture & Isolation Boundary
           </h2>
           <p className="mt-3 text-slate-400 text-base">
-            Click on any namespace node to inspect its ReplicaSet state, Pod network interfaces, and DNS endpoint resolution.
+            Click on any namespace node to inspect its ReplicaSet state, ResourceQuotas, and Zero-Trust NetworkPolicies.
           </p>
         </div>
 
@@ -124,6 +124,24 @@ export default function Architecture() {
                     </div>
                   </div>
 
+                  {/* Security Quota & NetPol Badges */}
+                  <div className="mb-4 space-y-1.5 font-mono text-[10.5px]">
+                    <div className="flex items-center justify-between bg-slate-900/90 px-2.5 py-1 rounded border border-slate-800 text-slate-300">
+                      <span className="flex items-center gap-1 text-amber-400">
+                        <Shield className="w-3 h-3" />
+                        <span>Quota Cap:</span>
+                      </span>
+                      <span>{ns.cpuQuota} • {ns.ramQuota}</span>
+                    </div>
+                    <div className="flex items-center justify-between bg-slate-900/90 px-2.5 py-1 rounded border border-slate-800 text-slate-300">
+                      <span className="flex items-center gap-1 text-emerald-400">
+                        <Lock className="w-3 h-3" />
+                        <span>NetPol:</span>
+                      </span>
+                      <span className="text-emerald-400 font-semibold">Active Ingress</span>
+                    </div>
+                  </div>
+
                   {/* Pod Visual Boxes */}
                   <div className="mb-4">
                     <div className="text-[11px] font-mono text-slate-400 mb-2 flex items-center gap-1">
@@ -170,7 +188,7 @@ export default function Architecture() {
                   </h4>
                 </div>
                 <div className="text-xs font-mono text-slate-400">
-                  Scaling Test Result: <span className="text-emerald-400 font-semibold">Scalable up to {activeNsData.scaledReplicas} replicas independently</span>
+                  ResourceQuota Ceiling: <span className="text-amber-400 font-semibold">{activeNsData.cpuQuota} • {activeNsData.ramQuota} • Max {activeNsData.maxPodsQuota} Pods</span>
                 </div>
               </div>
 
@@ -181,6 +199,14 @@ export default function Architecture() {
                     <span>Purpose & Operational Role</span>
                   </h5>
                   <p className="text-slate-400 leading-relaxed mb-4">{activeNsData.purpose}</p>
+
+                  <h5 className="font-mono font-semibold text-slate-200 mb-2 flex items-center gap-1.5">
+                    <Lock className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Zero-Trust NetworkPolicy Ingress</span>
+                  </h5>
+                  <code className="block bg-slate-900 p-2.5 rounded-lg border border-slate-800 font-mono text-emerald-300 text-[11px] mb-4">
+                    {activeNsData.netPolStatus}
+                  </code>
 
                   <h5 className="font-mono font-semibold text-slate-200 mb-2 flex items-center gap-1.5">
                     <Globe className="w-3.5 h-3.5 text-blue-400" />

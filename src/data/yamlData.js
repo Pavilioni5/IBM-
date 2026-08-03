@@ -75,6 +75,60 @@ spec:
         { field: "type: ClusterIP", desc: "Default internal-only service type; inaccessible outside cluster without tunnels." },
         { field: "port vs targetPort", desc: "Port 80 on Service routes directly to targetPort 80 on container." }
       ]
+    },
+    quota: {
+      filename: "quotas/dev-quota.yaml",
+      raw: `apiVersion: v1
+kind: ResourceQuota
+
+metadata:
+  name: dev-quota
+  namespace: dev
+
+spec:
+  hard:
+    pods: "5"
+    requests.cpu: "500m"
+    requests.memory: "512Mi"
+    limits.cpu: "1"
+    limits.memory: "1Gi"`,
+      annotations: [
+        { field: "kind: ResourceQuota", desc: "Enforces aggregate resource ceilings for CPU, Memory, and Pod counts." },
+        { field: "pods: 5", desc: "Limits dev namespace to a maximum of 5 concurrent active Pods." },
+        { field: "limits.cpu: 1", desc: "Restricts cumulative CPU limit to 1 vCPU core." },
+        { field: "limits.memory: 1Gi", desc: "Restricts cumulative RAM usage to 1 Gigabyte." }
+      ]
+    },
+    netpol: {
+      filename: "netpol/dev-netpol.yaml",
+      raw: `apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+
+metadata:
+  name: dev-network-policy
+  namespace: dev
+
+spec:
+  podSelector:
+    matchLabels:
+      app: nginx
+
+  policyTypes:
+  - Ingress
+
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: dev
+    ports:
+    - protocol: TCP
+      port: 80`,
+      annotations: [
+        { field: "kind: NetworkPolicy", desc: "Zero-Trust firewalls restricting ingress/egress network flows." },
+        { field: "namespaceSelector.matchLabels", desc: "Allows ingress traffic ONLY from Pods residing in the dev namespace." },
+        { field: "ports: TCP/80", desc: "Permits HTTP port 80 traffic while blocking cross-namespace requests." }
+      ]
     }
   },
   test: {
@@ -145,6 +199,55 @@ spec:
       annotations: [
         { field: "name: nginx-service", desc: "Same service name as dev, but fully isolated in test namespace." }
       ]
+    },
+    quota: {
+      filename: "quotas/test-quota.yaml",
+      raw: `apiVersion: v1
+kind: ResourceQuota
+
+metadata:
+  name: test-quota
+  namespace: test
+
+spec:
+  hard:
+    pods: "3"
+    requests.cpu: "250m"
+    requests.memory: "256Mi"
+    limits.cpu: "500m"
+    limits.memory: "512Mi"`,
+      annotations: [
+        { field: "limits.cpu: 500m", desc: "Limits test namespace to 0.5 CPU core to preserve host resources." }
+      ]
+    },
+    netpol: {
+      filename: "netpol/test-netpol.yaml",
+      raw: `apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+
+metadata:
+  name: test-network-policy
+  namespace: test
+
+spec:
+  podSelector:
+    matchLabels:
+      app: nginx
+
+  policyTypes:
+  - Ingress
+
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: test
+    ports:
+    - protocol: TCP
+      port: 80`,
+      annotations: [
+        { field: "policyTypes: Ingress", desc: "Isolates test workloads from external cross-namespace requests." }
+      ]
     }
   },
   prod: {
@@ -213,6 +316,55 @@ spec:
   type: ClusterIP`,
       annotations: [
         { field: "ClusterIP", desc: "Ensures production workload endpoints are protected internally." }
+      ]
+    },
+    quota: {
+      filename: "quotas/prod-quota.yaml",
+      raw: `apiVersion: v1
+kind: ResourceQuota
+
+metadata:
+  name: prod-quota
+  namespace: prod
+
+spec:
+  hard:
+    pods: "10"
+    requests.cpu: "2"
+    requests.memory: "2Gi"
+    limits.cpu: "4"
+    limits.memory: "4Gi"`,
+      annotations: [
+        { field: "limits.cpu: 4", desc: "Production-grade allocation: up to 4 vCPU cores and 4GB RAM." }
+      ]
+    },
+    netpol: {
+      filename: "netpol/prod-netpol.yaml",
+      raw: `apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+
+metadata:
+  name: prod-network-policy
+  namespace: prod
+
+spec:
+  podSelector:
+    matchLabels:
+      app: nginx
+
+  policyTypes:
+  - Ingress
+
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: prod
+    ports:
+    - protocol: TCP
+      port: 80`,
+      annotations: [
+        { field: "metadata.name: prod-network-policy", desc: "Protects production database and HTTP services from dev/test probing." }
       ]
     }
   }
